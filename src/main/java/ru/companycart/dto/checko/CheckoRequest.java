@@ -1,18 +1,18 @@
-package ru.companycart.dto.dadata;
+package ru.companycart.dto.checko;
 
 import lombok.Data;
 
 @Data
-public class DadataRequest {
+public class CheckoRequest {
     private String query;
     private Integer count;
 
-    public DadataRequest(String query) {
+    public CheckoRequest(String query) {
         this.query = query;
         this.count = 1;
     }
 
-    public DadataRequest(String query, Integer count) {
+    public CheckoRequest(String query, Integer count) {
         this.query = query;
         this.count = count;
     }

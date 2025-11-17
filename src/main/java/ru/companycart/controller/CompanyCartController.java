@@ -1,10 +1,7 @@
 package ru.companycart.controller;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import ru.companycart.entity.CompanyCartEntity;
 import ru.companycart.service.CompanyCartService;
 
@@ -18,5 +15,10 @@ public class CompanyCartController {
     @GetMapping("/{inn}")
     public CompanyCartEntity getCompany(@PathVariable String inn) {
         return companyCartService.getCompanyByInn(inn);
+    }
+
+    @GetMapping("/save/{inn}")
+    public CompanyCartEntity saveCompany(@PathVariable String inn) {
+        return companyCartService.saveCompany(inn);
     }
 }

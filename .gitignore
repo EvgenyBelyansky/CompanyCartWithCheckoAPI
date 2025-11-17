@@ -36,3 +36,6 @@ build/
 /.mvn/wrapper/maven-wrapper.properties
 /mvnw
 /mvnw.cmd
+/logs/application.log
+/logs/application.log.2025-11-16.0.gz
+/logs/application.log.2025-11-11.0.gz

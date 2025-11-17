@@ -7,8 +7,11 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.data.convert.Jsr310Converters;
 
+import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,12 +41,6 @@ public class CompanyCartEntity {
 
     private String status;
 
-    @Column(name = "registration_date")
-    private Instant registrationDate;
-
-    @Column(name = "liquidation_date")
-    private Instant liquidationDate;
-
     private String address;
 
     @Column(name = "main_okved")
@@ -52,45 +49,11 @@ public class CompanyCartEntity {
     @Column(name = "additional_okveds")
     private List<String> additionalOkveds;
 
-    // Поля для хостинг-провайдера
-    @Column(name = "user_login")
-    private String userLogin;
-
-    @Column(name = "user_kind")
-    private Integer userKind;
-
-    @Column(name = "register_ip")
-    private String registerIP;
-
-    @Column(name = "register_timestamp")
-    private Long registerTimestamp;
-
-    @Column(name = "unregister_timestamp")
-    private Long unregisterTimestamp;
-
-    @Column(name = "contract_number")
-    private String contract;
-
-    @Column(name = "company_small_name")
-    private String companySmallName;
-
-    @Column(name = "company_full_name")
-    private String companyFullName;
-
-    @Column(name = "company_grn")
-    private String companyGrn;
-
     @Column(name = "company_url")
     private String companyUrl;
 
     @Column(name = "company_register_timestamp")
-    private Long companyRegisterDateTimestamp;
-
-    @Column(name = "company_egrul")
-    private String companyEgrul;
-
-    @Column(name = "company_egrip")
-    private String companyEgrip;
+    private String companyRegisterDateTimestamp;
 
     @Column(name = "company_zip")
     private String companyZip;
@@ -111,7 +74,7 @@ public class CompanyCartEntity {
     private String companyBuilding;
 
     @Column(name = "company_msisdn")
-    private String companyMsisdn;
+    private List<String> companyMsisdn;
 
     @Column(name = "company_email")
     private String companyEmail;
@@ -132,18 +95,10 @@ public class CompanyCartEntity {
     @Column(name = "company_representative_position")
     private String companyRepresentativePosition;
 
-    @CreationTimestamp
-    private Instant createdAt;
-
-    @UpdateTimestamp
-    private Instant updatedAt;
-
     //Конструктор заглушка
     @Builder
     public CompanyCartEntity(String inn) {
         this.inn = inn;
     }
-
-
 
 }
