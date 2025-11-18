@@ -136,7 +136,6 @@ public class CheckoResponse {
         return null;
     }
 
-    // Вспомогательные методы
     private String getStringValue(Map<String, Object> map, String key) {
         return map.containsKey(key) && map.get(key) != null ?
                 String.valueOf(map.get(key)) : null;

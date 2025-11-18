@@ -1,17 +1,10 @@
 package ru.companycart.entity;
 
 import jakarta.persistence.*;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-import org.springframework.data.convert.Jsr310Converters;
 
-import java.sql.Timestamp;
-import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -83,22 +76,15 @@ public class CompanyCartEntity {
     @Column(name = "company_representative_name")
     private String companyRepresentativeName;
 
-    @Column(name = "company_representative_last_name")
-    private String companyRepresentativeLastName;
-
     @Column(name = "company_representative_middle_name")
     private String companyRepresentativeMiddleName;
+
+    @Column(name = "company_representative_last_name")
+    private String companyRepresentativeLastName;
 
     @Column(name = "company_representative_inn")
     private String companyRepresentativeInn;
 
     @Column(name = "company_representative_position")
     private String companyRepresentativePosition;
-
-    //Конструктор заглушка
-    @Builder
-    public CompanyCartEntity(String inn) {
-        this.inn = inn;
-    }
-
 }

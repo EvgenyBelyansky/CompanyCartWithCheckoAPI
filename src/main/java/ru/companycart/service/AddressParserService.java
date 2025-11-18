@@ -5,6 +5,7 @@ import ru.companycart.dto.checko.AddressComponents;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -12,26 +13,32 @@ import java.util.regex.Pattern;
 public class AddressParserService {
 
     public AddressComponents parseAddress(String fullAddress) {
+        AddressComponents components = new AddressComponents();
+
         if (fullAddress == null || fullAddress.trim().isEmpty()) {
-            return new AddressComponents();
+            return components;
         }
 
-        AddressComponents components = new AddressComponents();
-        components.setFullAddress(fullAddress.trim());
+        String trimmedAddress = fullAddress.trim();
+        components.setFullAddress(trimmedAddress);
 
         try {
-            String[] parts = fullAddress.split(",");
-            if (parts.length > 0) {
-                String firstPart = parts[0].trim();
-                if (firstPart.matches("\\d{6}")) {
-                    components.setPostalCode(firstPart);
-                }
-            }
-            parseByKeywords(fullAddress, components);
+            extractPostalCode(trimmedAddress, components);
+            parseByKeywords(trimmedAddress, components);
         } catch (Exception e) {
-            components.setFullAddress(fullAddress);
+            components.setFullAddress(trimmedAddress);
         }
         return components;
+    }
+
+    private void extractPostalCode(String address, AddressComponents components) {
+        String[] parts = address.split(",", 2);
+        if (parts.length == 0) return;
+
+        String firstPart = parts[0].trim();
+        if (firstPart.matches("\\d{6}")) {
+            components.setPostalCode(firstPart);
+        }
     }
 
     private void parseByKeywords(String address, AddressComponents components) {
@@ -90,27 +97,22 @@ public class AddressParserService {
             if ((lowerPart.startsWith("зд ") || lowerPart.startsWith("здание ") ||
                     lowerPart.contains("зд.")) && components.getHouse() == null) {
                 components.setHouse(extractHouseNumber(part));
-            }
-            else if ((lowerPart.startsWith("д ") || lowerPart.startsWith("дом ") ||
+            } else if ((lowerPart.startsWith("д ") || lowerPart.startsWith("дом ") ||
                     lowerPart.contains("д.")) && components.getHouse() == null &&
                     isHousePart(part)) {
                 components.setHouse(extractHouseNumber(part));
-            }
-            else if ((lowerPart.startsWith("корп ") || lowerPart.startsWith("корпус ") ||
+            } else if ((lowerPart.startsWith("корп ") || lowerPart.startsWith("корпус ") ||
                     lowerPart.startsWith("к ") || lowerPart.contains("корп.")) &&
                     buildingComponents.get("корпус") == null) {
                 buildingComponents.put("корпус", extractBuildingNumber(part));
-            }
-            else if ((lowerPart.startsWith("стр ") || lowerPart.startsWith("строение ") ||
+            } else if ((lowerPart.startsWith("стр ") || lowerPart.startsWith("строение ") ||
                     lowerPart.contains("стр.")) && buildingComponents.get("строение") == null) {
                 buildingComponents.put("строение", extractBuildingNumber(part));
-            }
-            else if ((lowerPart.contains("литера ") || lowerPart.startsWith("литер ") ||
+            } else if ((lowerPart.contains("литера ") || lowerPart.startsWith("литер ") ||
                     lowerPart.contains("лит.") || lowerPart.startsWith("лит ")) &&
                     buildingComponents.get("литера") == null) {
                 buildingComponents.put("литера", extractLiter(part));
-            }
-            else if ((lowerPart.startsWith("помещ ") || lowerPart.startsWith("помещение ") ||
+            } else if ((lowerPart.startsWith("помещ ") || lowerPart.startsWith("помещение ") ||
                     lowerPart.contains("помещ.") || lowerPart.startsWith("кв ") ||
                     lowerPart.startsWith("квартира ") || lowerPart.contains("кв.") ||
                     lowerPart.startsWith("оф ") || lowerPart.startsWith("офис ") ||
@@ -119,28 +121,40 @@ public class AddressParserService {
                 components.setApartment(extractApartmentNumber(part));
             }
         }
+        processHouseComponents(address, components, buildingComponents);
+    }
 
-        if (components.getHouse() != null || !buildingComponents.isEmpty()) {
-            StringBuilder fullHouseBuilder = new StringBuilder();
+    private void processHouseComponents(String address, AddressComponents components, Map<String, String> buildingComponents) {
+        buildFullHouseNumber(components, buildingComponents);
+        findMissingHouse(address, components);
+    }
 
-            if (components.getHouse() != null) {
-                fullHouseBuilder.append("д. ").append(components.getHouse());
-            }
+    private void buildFullHouseNumber(AddressComponents components, Map<String, String> buildingComponents) {
+        boolean hasHouse = components.getHouse() != null;
+        boolean hasBuildings = !buildingComponents.isEmpty();
 
-            for (Map.Entry<String, String> entry : buildingComponents.entrySet()) {
-                if (fullHouseBuilder.length() > 0) {
-                    fullHouseBuilder.append(", ");
-                }
-                fullHouseBuilder.append(entry.getKey()).append(" ").append(entry.getValue());
-            }
-            components.setFullHouseNumber(fullHouseBuilder.toString());
+        if (!hasHouse && !hasBuildings) {
+            return;
         }
 
+        StringBuilder builder = new StringBuilder();
+
+        if (hasHouse) {
+            builder.append("д. ").append(components.getHouse());
+        }
+
+        buildingComponents.forEach((type, number) -> {
+            if (builder.length() > 0) builder.append(", ");
+            builder.append(type).append(" ").append(number);
+        });
+
+        components.setFullHouseNumber(builder.toString());
+    }
+
+    private void findMissingHouse(String address, AddressComponents components) {
         if (components.getHouse() == null) {
-            String houseFromAddress = findFirstHouseNumberInAddress(address);
-            if (houseFromAddress != null) {
-                components.setHouse(houseFromAddress);
-            }
+            Optional.ofNullable(findFirstHouseNumberInAddress(address))
+                    .ifPresent(components::setHouse);
         }
     }
 
@@ -159,7 +173,6 @@ public class AddressParserService {
                 lowerPart.contains("корп") || lowerPart.matches(".*\\d+.*")) {
             return true;
         }
-
         return false;
     }
 
@@ -174,7 +187,6 @@ public class AddressParserService {
         if (matcher.find()) {
             return matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
         }
-
         return null;
     }
 
@@ -209,7 +221,7 @@ public class AddressParserService {
                 break;
             default:
                 cleaned = cleaned.replaceAll(
-                        "^[гдкупршб]\\.?\\s*",
+                                "^[гдкупршб]\\.?\\s*",
                                 ""
                         )
                         .replaceAll(
