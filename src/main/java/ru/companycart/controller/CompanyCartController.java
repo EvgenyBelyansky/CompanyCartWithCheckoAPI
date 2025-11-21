@@ -1,13 +1,19 @@
 package ru.companycart.controller;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.companycart.entity.CompanyCartEntity;
 import ru.companycart.service.CompanyCartService;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/companycart")
 @RequiredArgsConstructor
+@Slf4j
 public class CompanyCartController {
 
     private final CompanyCartService companyCartService;
@@ -20,5 +26,41 @@ public class CompanyCartController {
     @GetMapping("/save/{inn}")
     public CompanyCartEntity saveCompany(@PathVariable String inn) {
         return companyCartService.saveCompany(inn);
+    }
+
+    @GetMapping("/multiple")
+    public ResponseEntity<List<CompanyCartEntity>> getCompaniesBatch(
+            @RequestParam List<String> inn) {
+        try {
+            List<CompanyCartEntity> companies = companyCartService.getCompaniesByInnBatch(inn);
+            return ResponseEntity.ok(companies);
+        } catch (Exception e) {
+            log.error("Error in batch processing", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @GetMapping("/multiple/save")
+    public ResponseEntity<List<CompanyCartEntity>> saveCompaniesBatch(
+            @RequestParam List<String> inn) {
+        try {
+            List<CompanyCartEntity> savedCompanies = companyCartService.saveCompaniesBatch(inn);
+            return ResponseEntity.ok(savedCompanies);
+        } catch (Exception e) {
+            log.error("Error in batch saving", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @GetMapping("/parallel-optimized")
+    public ResponseEntity<List<CompanyCartEntity>> getCompaniesParallelOptimized(
+            @RequestParam List<String> inn) {
+        try {
+            List<CompanyCartEntity> companies = companyCartService.getCompaniesParallelOptimized(inn);
+            return ResponseEntity.ok(companies);
+        } catch (Exception e) {
+            log.error("Error in optimized parallel processing", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }
