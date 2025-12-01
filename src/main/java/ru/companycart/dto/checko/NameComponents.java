@@ -6,7 +6,7 @@ import lombok.Data;
 public class NameComponents {
 
     private String name;
-    private String midlName;
+    private String middleName;
     private String lastName;
 
 }

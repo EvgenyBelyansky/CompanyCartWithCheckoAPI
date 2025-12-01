@@ -28,23 +28,11 @@ public class CompanyCartController {
         return companyCartService.saveCompany(inn);
     }
 
-    @GetMapping("/multiple")
-    public ResponseEntity<List<CompanyCartEntity>> getCompaniesBatch(
-            @RequestParam List<String> inn) {
-        try {
-            List<CompanyCartEntity> companies = companyCartService.getCompaniesByInnBatch(inn);
-            return ResponseEntity.ok(companies);
-        } catch (Exception e) {
-            log.error("Error in batch processing", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
 
     @GetMapping("/multiple/save")
-    public ResponseEntity<List<CompanyCartEntity>> saveCompaniesBatch(
-            @RequestParam List<String> inn) {
+    public ResponseEntity<List<CompanyCartEntity>> saveCompaniesBatch(@RequestParam List<String> inn) {
         try {
-            List<CompanyCartEntity> savedCompanies = companyCartService.saveCompaniesBatch(inn);
+            List<CompanyCartEntity> savedCompanies = companyCartService.saveCompaniesBatchAtomic(inn);
             return ResponseEntity.ok(savedCompanies);
         } catch (Exception e) {
             log.error("Error in batch saving", e);
@@ -52,15 +40,8 @@ public class CompanyCartController {
         }
     }
 
-    @GetMapping("/parallel-optimized")
-    public ResponseEntity<List<CompanyCartEntity>> getCompaniesParallelOptimized(
-            @RequestParam List<String> inn) {
-        try {
-            List<CompanyCartEntity> companies = companyCartService.getCompaniesParallelOptimized(inn);
-            return ResponseEntity.ok(companies);
-        } catch (Exception e) {
-            log.error("Error in optimized parallel processing", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
+//    @GetMapping("/status")
+//    public String getStatus() {
+//        return updateCompanyCartService.getUpdateStatus();
+//    }
 }

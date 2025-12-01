@@ -5,7 +5,7 @@ import lombok.Data;
 @Data
 public class AddressComponents {
     private String postalCode;
-    private String country;
+    private String country = "Россия";
     private String region;
     private String city;
     private String district;
@@ -16,7 +16,4 @@ public class AddressComponents {
     private String fullHouseNumber;
     private String fullAddress;
 
-    public AddressComponents() {
-        this.country = "Россия";
-    }
 }

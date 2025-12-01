@@ -87,4 +87,6 @@ public class CompanyCartEntity {
 
     @Column(name = "company_representative_position")
     private String companyRepresentativePosition;
+
+
 }
