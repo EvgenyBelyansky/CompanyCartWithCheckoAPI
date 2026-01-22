@@ -2,12 +2,17 @@ package ru.companycart.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import ru.companycart.entity.CompanyCartEntity;
+import ru.companycart.dto.company.CompanyDto;
+import ru.companycart.dto.company.CompanyInnDto;
 import ru.companycart.service.CompanyCartService;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Collection;
 import java.util.List;
 
 @RestController
@@ -19,29 +24,33 @@ public class CompanyCartController {
     private final CompanyCartService companyCartService;
 
     @GetMapping("/{inn}")
-    public CompanyCartEntity getCompany(@PathVariable String inn) {
-        return companyCartService.getCompanyByInn(inn);
+    public CompanyDto getCompany(@PathVariable String inn) {
+        return companyCartService.fetchCompanyByInn(inn);
     }
 
-    @GetMapping("/save/{inn}")
-    public CompanyCartEntity saveCompany(@PathVariable String inn) {
-        return companyCartService.saveCompany(inn);
+    @PostMapping("/save")
+    public CompanyDto saveCompany(@RequestBody CompanyInnDto companyInnDto) {
+        return companyCartService.saveCompanyFromChecko(companyInnDto.inn());
     }
 
-
-    @GetMapping("/multiple/save")
-    public ResponseEntity<List<CompanyCartEntity>> saveCompaniesBatch(@RequestParam List<String> inn) {
-        try {
-            List<CompanyCartEntity> savedCompanies = companyCartService.saveCompaniesBatchAtomic(inn);
-            return ResponseEntity.ok(savedCompanies);
-        } catch (Exception e) {
-            log.error("Error in batch saving", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+    @PostMapping("save/batch")
+    public Collection<CompanyDto> saveCompaniesBatch(@RequestBody List<String> innList) {
+        return companyCartService.fetchAndSaveCompanyByInnBatch(innList);
     }
 
-//    @GetMapping("/status")
-//    public String getStatus() {
-//        return updateCompanyCartService.getUpdateStatus();
-//    }
+    @PostMapping("/update/{inn}")
+    public CompanyDto updateCompanyCart(@PathVariable String inn) {
+        return companyCartService.fetchAndUpdateCompanyByInn(inn);
+    }
+
+    @GetMapping("/file")
+    public ResponseEntity<byte[]> testMetod() {
+        final byte[] oldestActualCompanyAsByteArray = companyCartService.getOldestActualCompanyAsByteArray();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=%s.csv".formatted(LocalDateTime.now()
+                        .format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")))
+                )
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(oldestActualCompanyAsByteArray);
+    }
 }

@@ -1,4 +1,4 @@
-package ru.companycart.config;
+package ru.companycart.checko;
 
 import feign.Logger;
 import feign.Request;

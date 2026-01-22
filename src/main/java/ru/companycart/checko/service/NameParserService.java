@@ -1,7 +1,7 @@
-package ru.companycart.service;
+package ru.companycart.checko.service;
 
 import org.springframework.stereotype.Service;
-import ru.companycart.dto.checko.NameComponents;
+import ru.companycart.dto.NameComponents;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -50,7 +50,7 @@ public class NameParserService {
         if (matcher.find()) {
             components.setLastName(capitalizeName(matcher.group(1)));
             components.setName(capitalizeName(matcher.group(3)));
-            components.setMidlName(capitalizeName(matcher.group(4)));
+            components.setMiddleName(capitalizeName(matcher.group(4)));
             return true;
         }
         return false;
@@ -68,7 +68,7 @@ public class NameParserService {
         Matcher matcher = pattern.matcher(name);
         if (matcher.find()) {
             components.setName(capitalizeName(matcher.group(1)));
-            components.setMidlName(capitalizeName(matcher.group(2)));
+            components.setMiddleName(capitalizeName(matcher.group(2)));
             components.setLastName(capitalizeName(matcher.group(3)));
             return true;
         }
@@ -89,7 +89,7 @@ public class NameParserService {
         if (matcher1.find()) {
             components.setLastName(capitalizeName(matcher1.group(1)));
             components.setName(capitalizeName(matcher1.group(3) + "."));
-            components.setMidlName(capitalizeName(matcher1.group(4) + "."));
+            components.setMiddleName(capitalizeName(matcher1.group(4) + "."));
             return true;
         }
 
@@ -101,7 +101,7 @@ public class NameParserService {
         Matcher matcher2 = pattern2.matcher(name);
         if (matcher2.find()) {
             components.setName(capitalizeName(matcher2.group(1) + "."));
-            components.setMidlName(capitalizeName(matcher2.group(2) + "."));
+            components.setMiddleName(capitalizeName(matcher2.group(2) + "."));
             components.setLastName(capitalizeName(matcher2.group(3)));
             return true;
         }

@@ -1,7 +1,7 @@
-package ru.companycart.service;
+package ru.companycart.checko.service;
 
 import org.springframework.stereotype.Service;
-import ru.companycart.dto.checko.AddressComponents;
+import ru.companycart.dto.AddressComponents;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -15,7 +15,7 @@ public class AddressParserService {
     public AddressComponents parseAddress(String fullAddress) {
         AddressComponents components = new AddressComponents();
 
-        if (fullAddress == null || fullAddress.trim().isEmpty()) {
+        if (fullAddress == null || fullAddress.isBlank()) {
             return components;
         }
 
@@ -73,6 +73,16 @@ public class AddressParserService {
                     !cityFound) {
                 components.setCity(cleanAddressPart(part, "city"));
                 cityFound = true;
+            } else if ((lowerPart.startsWith("п ") || lowerPart.startsWith("пос ") ||
+                    lowerPart.startsWith("поселок ") || lowerPart.contains("п.")) &&
+                    !cityFound) {
+                components.setCity(cleanAddressPart(part, "city"));
+                cityFound = true;
+            } else if ((lowerPart.startsWith("жд/ст ") || lowerPart.startsWith("ж/д_ст ") ||
+                    lowerPart.startsWith("железнодорожная станция ") || lowerPart.contains("ж/д_ст. ")) &&
+                    !cityFound) {
+                components.setCity(cleanAddressPart(part, "city"));
+                cityFound = true;
             } else if (lowerPart.contains("район") || lowerPart.contains("р-н")) {
                 components.setDistrict(cleanAddressPart(part, "district"));
             } else if (lowerPart.startsWith("ул ") || lowerPart.startsWith("улица ") ||
@@ -90,7 +100,9 @@ public class AddressParserService {
 
         Map<String, String> buildingComponents = new LinkedHashMap<>();
 
-        for (int i = 0; i < parts.length; i++) {
+        for (
+                int i = 0;
+                i < parts.length; i++) {
             String part = parts[i].trim();
             String lowerPart = part.toLowerCase();
 
@@ -112,6 +124,10 @@ public class AddressParserService {
                     lowerPart.contains("лит.") || lowerPart.startsWith("лит ")) &&
                     buildingComponents.get("литера") == null) {
                 buildingComponents.put("литера", extractLiter(part));
+            } else if ((lowerPart.contains("сооружение ") || lowerPart.startsWith("сооруж ") ||
+                    lowerPart.contains("соор.") || lowerPart.startsWith("соор ")) &&
+                    buildingComponents.get("сооружение") == null) {
+                buildingComponents.put("литера", extractLiter(part));
             } else if ((lowerPart.startsWith("помещ ") || lowerPart.startsWith("помещение ") ||
                     lowerPart.contains("помещ.") || lowerPart.startsWith("кв ") ||
                     lowerPart.startsWith("квартира ") || lowerPart.contains("кв.") ||
@@ -121,6 +137,7 @@ public class AddressParserService {
                 components.setApartment(extractApartmentNumber(part));
             }
         }
+
         processHouseComponents(address, components, buildingComponents);
     }
 
@@ -196,7 +213,8 @@ public class AddressParserService {
         switch (partType) {
             case "city":
                 cleaned = cleaned.replaceAll(
-                        "^(г\\.?|гор\\.?|город|с\\.?|сел\\.?|село|д\\.?|дер\\.?|деревня)\\s*",
+                        "^(г\\.?|гор\\.?|город|с\\.?|сел\\.?|село|д\\.?|дер\\.?|деревня|п\\.?|пос\\.?|поселок|" +
+                                "ж/д_ст\\.?|жд_ст\\.?|железнодорожная станция\\.?)\\s*",
                         ""
                 ).trim();
 

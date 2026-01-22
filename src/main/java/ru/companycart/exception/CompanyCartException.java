@@ -1,9 +1,11 @@
 package ru.companycart.exception;
 
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 
 @Getter
+@Slf4j
 public abstract class CompanyCartException extends RuntimeException {
 
     private final CompanyCartErrorCode code;

@@ -1,4 +1,4 @@
-package ru.companycart.dto.checko;
+package ru.companycart.checko.dto;
 
 import lombok.Data;
 

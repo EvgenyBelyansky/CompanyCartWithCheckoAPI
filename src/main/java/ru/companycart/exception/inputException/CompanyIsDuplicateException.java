@@ -1,6 +1,8 @@
-package ru.companycart.exception;
+package ru.companycart.exception.inputException;
 
 import org.springframework.http.HttpStatus;
+import ru.companycart.exception.CompanyCartErrorCode;
+import ru.companycart.exception.CompanyCartException;
 
 public class CompanyIsDuplicateException extends CompanyCartException {
     public CompanyIsDuplicateException(Class clazz, Object object) {

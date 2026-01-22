@@ -1,294 +1,280 @@
 package ru.companycart.service;
 
-import com.google.common.collect.Lists;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
-import ru.companycart.dto.checko.AddressComponents;
-import ru.companycart.dto.checko.CheckoResponse;
-import ru.companycart.dto.checko.NameComponents;
+import org.supercsv.io.CsvBeanWriter;
+import org.supercsv.io.ICsvBeanWriter;
+import org.supercsv.prefs.CsvPreference;
+import ru.companycart.checko.dto.CheckoResponse;
+import ru.companycart.checko.service.AddressParserService;
+import ru.companycart.checko.service.CheckoApiService;
+import ru.companycart.checko.service.NameParserService;
+import ru.companycart.dto.*;
+import ru.companycart.dto.company.CompanyCsvDto;
+import ru.companycart.dto.company.CompanyDto;
+import ru.companycart.dto.company.CompanyUpdateDto;
 import ru.companycart.entity.CompanyCartEntity;
+import ru.companycart.exception.repositoryException.CompanyNotExistException;
+import ru.companycart.mapper.CompanyMapper;
 import ru.companycart.repository.CompanyCartRepository;
+import ru.companycart.validation.CheckoValidator;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class CompanyCartService {
 
-    private final CheckoApiService checkoApiService; // ← ЗАМЕНА: CheckoClient → CheckoApiService
+    private final CheckoApiService checkoApiService;
+    private final CompanyMapper companyMapper;
+    private final CompanyCartRepository companyCartRepository;
+    private final CheckoValidator checkoValidator;
     private final AddressParserService addressParserService;
     private final NameParserService nameParserService;
-    private final CompanyCartRepository companyCartRepository;
-
-    @Qualifier("apiTaskExecutor")
-    private final Executor apiTaskExecutor;
-
-    // ЗАМЕНА в конструкторе
-    public CompanyCartService(CheckoApiService checkoApiService, // ← CheckoApiService вместо CheckoClient
-                              AddressParserService addressParserService,
-                              NameParserService nameParserService,
-                              CompanyCartRepository companyCartRepository,
-                              Executor apiTaskExecutor) {
-        this.checkoApiService = checkoApiService;
-        this.addressParserService = addressParserService;
-        this.nameParserService = nameParserService;
-        this.companyCartRepository = companyCartRepository;
-        this.apiTaskExecutor = apiTaskExecutor;
-    }
-
-    private final com.google.common.util.concurrent.RateLimiter rateLimiter =
-            com.google.common.util.concurrent.RateLimiter.create(2.0);
 
     /**
-     * АТОМАРНАЯ обработка с гарантией целостности данных
+     * Поиск одной компании по ИНН
+     * @param inn ИНН компании
+     * @return CompanyCartEntity
      */
-    @Transactional(
-            isolation = Isolation.SERIALIZABLE,
-            timeout = 120,
-            rollbackFor = Exception.class
-    )
-    public List<CompanyCartEntity> saveCompaniesBatchAtomic(List<String> innList) {
-        if (innList == null || innList.isEmpty()) {
-            return List.of();
-        }
+    public CompanyDto fetchCompanyByInn(String inn) {
+        log.info("Поиск компании по ИНН: {}", inn);
 
-        log.info("🛡️ Starting OPTIMIZED PARALLEL ATOMIC BATCH for {} companies", innList.size());
-        long startTime = System.currentTimeMillis();
-
-        int maxAtomicBatchSize = 10;
-        List<String> processingInns = innList.size() > maxAtomicBatchSize
-                ? innList.subList(0, maxAtomicBatchSize)
-                : innList;
-
-        try {
-            List<CompletableFuture<CompanyCartEntity>> futures = processingInns.stream()
-                    .map(inn -> CompletableFuture.supplyAsync(
-                                            () -> processCompanyAtomically(inn),
-                                            apiTaskExecutor
-                                    )
-                                    .orTimeout(20, TimeUnit.SECONDS)
-                                    .exceptionally(throwable -> {
-                                        log.warn("⚠️ Company processing failed: {}", throwable.getMessage());
-                                        return null;
-                                    })
-                    )
-                    .collect(Collectors.toList());
-
-            CompletableFuture<Void> allFutures = CompletableFuture.allOf(
-                    futures.toArray(new CompletableFuture[0])
-            );
-
-            List<CompanyCartEntity> allResults = allFutures
-                    .thenApply(v -> futures.stream()
-                            .map(CompletableFuture::join)
-                            .collect(Collectors.toList()))
-                    .get(30, TimeUnit.SECONDS);
-
-            List<CompanyCartEntity> validCompanies = allResults.stream()
-                    .filter(result -> result != null && isValidEntityForSave(result))
-                    .collect(Collectors.toList());
-
-            log.info("📊 Parallel processing results: {}/{} successful, {} valid",
-                    allResults.stream().filter(Objects::nonNull).count(),
-                    processingInns.size(),
-                    validCompanies.size());
-
-            if (validCompanies.isEmpty()) {
-                log.warn("⚠️ No valid companies to save");
-                return List.of();
-            }
-
-            List<CompanyCartEntity> savedEntities = companyCartRepository.saveAll(validCompanies);
-
-            long duration = System.currentTimeMillis() - startTime;
-            log.info("🛡️ OPTIMIZED PARALLEL ATOMIC SUCCESS: Saved {}/{} companies in {} ms",
-                    savedEntities.size(), processingInns.size(), duration);
-
-            return savedEntities;
-
-        } catch (Exception e) {
-            log.error("🛡️ OPTIMIZED PARALLEL ATOMIC FAILED", e);
-            throw new RuntimeException("Optimized parallel atomic processing failed", e);
-        }
-    }
-
-    /**
-     * Атомарная обработка одной компании с улучшенной валидацией
-     */
-    private CompanyCartEntity processCompanyAtomically(String inn) {
-        try {
-            if (!rateLimiter.tryAcquire(5, TimeUnit.SECONDS)) {
-                log.error("🚫 Rate limit exceeded for INN: {}", inn);
-                return null;
-            }
-
-            // ЗАМЕНА: executeApiCallWithTimeout → прямой вызов checkoApiService
-            CheckoResponse response = checkoApiService.findCompanyByInn(inn);
-
-            if (response == null) {
-                log.warn("⚠️ No API response for INN: {}", inn);
-                return null;
-            }
-
-            // Проверка response.getData() уже сделана в checkoApiService
-            // Но оставляем для дополнительной безопасности
-            if (response.getData() == null) {
-                log.warn("⚠️ No data in API response for INN: {}", inn);
-                return null;
-            }
-
-            if (!isValidCompanyDataForSave(response)) {
-                log.warn("⚠️ Invalid company data for INN: {}", inn);
-                return null;
-            }
-
-            CompanyCartEntity entity = convertResponseToEntity(response);
-
-            return isValidEntityForSave(entity) ? entity : null;
-
-        } catch (Exception e) {
-            log.error("❌ Atomic processing failed for INN: {}", inn, e);
-            return null;
-        }
-    }
-
-    /**
-     * УДАЛЯЕМ метод executeApiCallWithTimeout - он больше не нужен
-     * Вся логика API вызовов теперь в CheckoApiService
-     */
-    // ❌ УДАЛЯЕМ этот метод:
-    // private CheckoResponse executeApiCallWithTimeout(String inn) { ... }
-
-    /**
-     * Обработка больших объемов с атомарными батчами
-     */
-    public List<CompanyCartEntity> saveCompaniesLargeBatchAtomic(List<String> innList) {
-        log.info("🏗️ Starting LARGE ATOMIC BATCH processing for {} companies", innList.size());
-
-        return Lists.partition(innList, 10)
-                .stream()
-                .flatMap(batch -> {
-                    try {
-                        List<CompanyCartEntity> saved = saveCompaniesBatchAtomic(batch);
-                        log.info("✅ Batch processed: {}/{} companies saved", saved.size(), batch.size());
-                        return saved.stream();
-                    } catch (Exception e) {
-                        log.error("🔴 Atomic batch failed for {} companies, skipping...", batch.size(), e);
-                        return Stream.empty();
-                    }
-                })
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Методы по поиску и сохранению в DB одной компании
-     * ОБНОВЛЯЕМ для использования checkoApiService
-     */
-    public CompanyCartEntity getCompanyByInn(String inn) {
         CheckoResponse response = checkoApiService.findCompanyByInn(inn);
 
-        if (response == null) {
-            throw new RuntimeException("Компания с ИНН " + inn + " не найдена в Checko");
-        }
+        checkoValidator.validateCompanyExistsInChecko(response, inn);
 
-        return convertResponseToEntity(response);
+        CompanyDto companyDto = companyMapper.fromResponseToDto(response);
+
+        log.info("Компания найдена: {} ({})", companyDto.getFullName(), inn);
+        return companyDto;
     }
 
+    /**
+     * Пакетный поиск компаний
+     * @param innList список ИНН
+     * @return список найденных компаний
+     */
+    private Collection<CompanyCartEntity> fetchCompanyByInnBatch(List<String> innList) {
+        log.info("Поиск компаний по списку ИНН ({}): {}", innList.size(), innList);
+
+        final Map<String, CheckoResponse> responses = checkoApiService.findCompaniesByInnsBatch(innList);
+
+        List<CompanyCartEntity> result = new ArrayList<>();
+        List<String> foundInns = new ArrayList<>();
+        List<String> notFoundInns = new ArrayList<>();
+
+        //todo проверить необходимость еще одной проверки
+        for (Map.Entry<String, CheckoResponse> entry : responses.entrySet()) {
+            String inn = entry.getKey();
+            CheckoResponse response = entry.getValue();
+
+            if (checkoValidator.isCompanyExistsInChecko(response, inn)) {
+                result.add(companyMapper.convertToEntity(response));
+                foundInns.add(inn);
+            } else {
+                notFoundInns.add(inn);
+            }
+        }
+
+        log.info("Результаты поиска:");
+        log.info("Найдено компаний: {} с ИНН {}", result.size(), foundInns);
+        log.warn("Не найдено: {} компаний с ИНН {}", notFoundInns.size(), notFoundInns);
+
+        if (responses.size() < innList.size()) {
+            Set<String> respondedInns = responses.keySet();
+            List<String> missingInns = innList.stream()
+                    .filter(inn -> !respondedInns.contains(inn))
+                    .collect(Collectors.toList());
+            log.warn("Нет ответа от API для: {} компаний {}", missingInns.size(), missingInns);
+        }
+        return result;
+    }
+
+    /**
+     * Сохранение одной компании в БД
+     * @param inn ИНН компании
+     * @return сохраненная CompanyCartEntity
+     */
     @Transactional
-    public CompanyCartEntity saveCompany(String inn) {
-        return companyCartRepository.save(getCompanyByInn(inn));
+    public CompanyDto saveCompanyFromChecko(String inn) {
+        log.info("Сохранение компании по ИНН: {}", inn);
+
+        CompanyDto savedCompany = fetchCompanyByInn(inn);
+        companyCartRepository.save(companyMapper.fromDtoToEntity(savedCompany));
+
+        log.info("Компания сохранена в БД: {} (ID: {})", savedCompany.getFullName(), savedCompany.getId());
+        return savedCompany;
     }
 
     /**
-     * Строгая валидация сущности перед сохранением в БД
+     * Пакетное сохранение компаний
+     * @param innList список ИНН
+     * @return список сохраненных компаний
      */
-    private boolean isValidEntityForSave(CompanyCartEntity entity) {
-        if (entity == null) {
-            return false;
-        }
-        if (entity.getInn() == null || entity.getInn().trim().isEmpty()) {
-            return false;
-        }
-        if (entity.getFullName() == null || entity.getFullName().trim().isEmpty()) {
-            return false;
-        }
-        if (entity.getStatus() != null && entity.getStatus().contains("ERROR")) {
-            return false;
-        }
-        return true;
+    @Transactional
+    public Collection<CompanyDto> fetchAndSaveCompanyByInnBatch(List<String> innList) {
+        log.info("Поиск и сохранение компаний по списку ИНН: {}", innList);
+
+        final Collection<CompanyCartEntity> companyCartEntities = fetchCompanyByInnBatch(innList);
+        final List<CompanyCartEntity> companyCartList = companyCartRepository.saveAll(companyCartEntities);
+        return companyCartList.stream()
+                .map(companyMapper::fromEntityToDto)
+                .toList();
     }
 
     /**
-     * Усиленная валидация данных компании перед сохранением
+     * Поиск и обновление компании
+     * @param inn ИНН компании
      */
-    private boolean isValidCompanyDataForSave(CheckoResponse response) {
-        if (response == null || response.getData() == null) {
-            return false;
-        }
-        if (response.getInn() == null || response.getInn().trim().isEmpty()) {
-            return false;
-        }
-        if (response.getFullName() == null || response.getFullName().trim().isEmpty()) {
-            return false;
-        }
-        if (response.getStatus() != null && response.getStatus().equals("LIQUIDATED")) {
-            log.warn("⚠️ Company is liquidated for INN: {}", response.getInn());
-            return false;
-        }
-        return true;
+    @Transactional
+    public CompanyDto fetchAndUpdateCompanyByInn(String inn) {
+        log.info("Поиск и обновление компании по ИНН: {}", inn);
+
+        CompanyCartEntity existingCompany = companyCartRepository.findByInn(inn)
+                .orElseThrow(() -> new CompanyNotExistException(inn));
+
+        CheckoResponse freshData = checkoApiService.findCompanyByInn(inn);
+        checkoValidator.validateCompanyExistsInChecko(freshData, inn);
+
+        existingCompany.updateCompanyEntity(fromResponseToCompanyUpdateDto(freshData));
+
+        log.info("Компания обновлена: {} (ID: {})",
+                existingCompany.getFullName(), existingCompany.getId());
+
+        return companyMapper.fromEntityToDto(existingCompany);
     }
 
-    /**
-     * Конвертация Response в Entity
-     */
-    private CompanyCartEntity convertResponseToEntity(CheckoResponse response) {
-        CompanyCartEntity companyCart = new CompanyCartEntity();
+    public byte[] getOldestActualCompanyAsByteArray() {
+        CompanyCartEntity entity = companyCartRepository.getOldestActualCompany();
+        CompanyCsvDto companyCsvDto = companyMapper.fromEntityToCompanyCsvDto(entity);
+        log.info("Что-то [{}]", entity);
+        log.info("Что-то 2 [{}]", companyCsvDto);
+        try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+             ICsvBeanWriter writer = new CsvBeanWriter(
+                     new OutputStreamWriter(byteArrayOutputStream),
+                     CsvPreference.STANDARD_PREFERENCE
+             )) {
 
-        companyCart.setInn(response.getInn());
-        companyCart.setKpp(response.getKpp());
-        companyCart.setOgrn(response.getOgrn());
-        companyCart.setFullName(response.getFullName());
-        companyCart.setShortName(response.getShortName());
-        companyCart.setStatus(response.getStatus());
-        companyCart.setCompanyRegisterDateTimestamp(response.getRegistrationDate());
+            final String[] nameMapping = {
+                    "id",
+                    "companyKind",
+                    "companyRegisterIp",
+                    "companyRegisterDate",
+                    "companyUpdateDate",
+                    "companyContractTerminationDate",
+                    "companyContractNumber",
+                    "companyContractConclusionDate",
+                    "ufName",
+                    "ufLastName",
+                    "ufMiddleName",
+                    "ufBirthday",
+                    "ufActualZip",
+                    "ufActualCountry",
+                    "ufActualRegion",
+                    "ufActualZone",
+                    "ufActualCity",
+                    "ufActualStreet",
+                    "ufActualBuilding",
+                    "ufActualBuildSect",
+                    "ufActualApartment",
+                    "ufRegisteredZip",
+                    "ufRegisteredCountry",
+                    "ufRegisteredRegion",
+                    "ufRegisteredZone",
+                    "ufRegisteredCity",
+                    "ufRegisteredStreet",
+                    "ufRegisteredBuilding",
+                    "ufRegisteredBuildSect",
+                    "ufRegisteredApartment",
+                    "ufPassportSeries",
+                    "ufPassportNumber",
+                    "ufPassportIssuedBy",
+                    "ufMsisdn",
+                    "ufEmail",
+                    "AdditionalInfo",
+                    "shortName",
+                    "fullName",
+                    "ogrn",
+                    "inn",
+                    "companyUrl",
+                    "companyRegisterDateTimestamp",
+                    "okveds",
+                    "address",
+                    "companyZip",
+                    "companyCountry",
+                    "companyRegion",
+                    "companyZone",
+                    "companyCity",
+                    "companyStreet",
+                    "companyBuilding",
+                    "ufCompanyBuildSect",
+                    "ufCompanyApartment",
+                    "companyMsisdn",
+                    "companyEmail",
+                    "companyRepresentativeName",
+                    "companyRepresentativeLastName",
+                    "companyRepresentativeInn",
+                    "companyRepresentativePosition",
+                    "companyBankName",
+                    "companyBankAccount",
+                    "companyBankCorrAccount",
+                    "companyBankCardNumber",
+                    "companyBankRcbic",
+                    "companyBankKpp"
+            };
 
-        String fullAddress = response.getAddress();
-        if (fullAddress != null) {
-            AddressComponents addressComponents = addressParserService.parseAddress(fullAddress);
-            companyCart.setAddress(addressComponents.getFullAddress());
-            companyCart.setCompanyZip(addressComponents.getPostalCode());
-            companyCart.setCompanyCountry(addressComponents.getCountry());
-            companyCart.setCompanyRegion(addressComponents.getRegion());
-            companyCart.setCompanyCity(addressComponents.getCity());
-            companyCart.setCompanyStreet(addressComponents.getStreet());
-            companyCart.setCompanyBuilding(addressComponents.getFullHouseNumber());
+            writer.write(companyCsvDto, nameMapping);
+            writer.flush();
+
+            String result = byteArrayOutputStream.toString(StandardCharsets.UTF_8);
+
+            result = result.replaceAll("\"\"\"", "\"");
+            result = result.replaceAll("\"\"", "\"");
+            result = result.replace("\\\"", "\"");
+
+            return result.getBytes(StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public CompanyUpdateDto fromResponseToCompanyUpdateDto(CheckoResponse response) {
+        if (response == null) {
+            return null;
         }
 
-        companyCart.setMainOkved(response.getMainOkved());
-        companyCart.setAdditionalOkveds(response.getAdditionalOkveds());
-        companyCart.setCompanyMsisdn(response.getPhone());
-        companyCart.setCompanyEmail(response.getEmail());
-        companyCart.setCompanyUrl(response.getWebsite());
+        CompanyUpdateDto updateDto = new CompanyUpdateDto();
 
-        String managerName = response.getManagerName();
-        if (managerName != null) {
-            NameComponents parsedName = nameParserService.parseFullName(managerName);
-            companyCart.setCompanyRepresentativeName(parsedName.getName());
-            companyCart.setCompanyRepresentativeLastName(parsedName.getLastName());
-            companyCart.setCompanyRepresentativeMiddleName(parsedName.getMidlName());
-        }
-        companyCart.setCompanyRepresentativePosition(response.getManagerPosition());
-        companyCart.setCompanyRepresentativeInn(response.getManagerInn());
+        AddressComponents addressComponents = addressParserService.parseAddress(response.getAddress());
+        NameComponents nameComponents = nameParserService.parseFullName(response.getManagerName());
 
-        return companyCart;
+        return updateDto.setStatus(response.getStatus())
+                .setAddress(addressComponents.getFullAddress())
+                .setMainOkved(response.getMainOkved())
+                .setAdditionalOkveds(response.getAdditionalOkveds())
+                .setCompanyUrl(response.getWebsite())
+                .setCompanyRegisterDateTimestamp(response.getRegistrationDate())
+                .setCompanyZip(addressComponents.getPostalCode())
+                .setCompanyCountry(addressComponents.getCountry())
+                .setCompanyRegion(addressComponents.getRegion())
+                .setCompanyCity(addressComponents.getCity())
+                .setCompanyStreet(addressComponents.getStreet())
+                .setCompanyBuilding(addressComponents.getFullHouseNumber())
+                .setCompanyMsisdn(response.getPhone())
+                .setCompanyEmail(response.getEmail())
+                .setCompanyRepresentativeName(nameComponents.getName())
+                .setCompanyRepresentativeMiddleName(nameComponents.getMiddleName())
+                .setCompanyRepresentativeLastName(nameComponents.getLastName())
+                .setCompanyRepresentativeInn(response.getManagerInn())
+                .setCompanyRepresentativePosition(response.getManagerPosition());
     }
 }
