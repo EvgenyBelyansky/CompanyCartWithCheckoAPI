@@ -11,6 +11,7 @@ import ru.companycart.dto.company.CompanyDto;
 import ru.companycart.dto.NameComponents;
 import ru.companycart.entity.CompanyCartEntity;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -78,21 +79,21 @@ public class CompanyMapper {
         dto.setAddress(entity.getAddress());
         dto.setMainOkved(entity.getMainOkved());
         dto.setAdditionalOkveds(entity.getAdditionalOkveds());
-        dto.setCompanyUrl(entity.getCompanyUrl());
-        dto.setCompanyRegisterDateTimestamp(entity.getCompanyRegisterDateTimestamp());
-        dto.setCompanyZip(entity.getCompanyZip());
-        dto.setCompanyCountry(entity.getCompanyCountry());
-        dto.setCompanyRegion(entity.getCompanyRegion());
-        dto.setCompanyCity(entity.getCompanyCity());
-        dto.setCompanyStreet(entity.getCompanyStreet());
-        dto.setCompanyBuilding(entity.getCompanyBuilding());
-        dto.setCompanyMsisdn(entity.getCompanyMsisdn());
-        dto.setCompanyEmail(entity.getCompanyEmail());
-        dto.setCompanyRepresentativeName(entity.getCompanyRepresentativeName());
-        dto.setCompanyRepresentativeMiddleName(entity.getCompanyRepresentativeMiddleName());
-        dto.setCompanyRepresentativeLastName(entity.getCompanyRepresentativeLastName());
-        dto.setCompanyRepresentativeInn(entity.getCompanyRepresentativeInn());
-        dto.setCompanyRepresentativePosition(entity.getCompanyRepresentativePosition());
+        dto.setUrl(entity.getUrl());
+        dto.setRegisterDateTimestamp(entity.getRegisterDateTimestamp());
+        dto.setZip(entity.getZip());
+        dto.setCountry(entity.getCountry());
+        dto.setRegion(entity.getRegion());
+        dto.setCity(entity.getCity());
+        dto.setStreet(entity.getStreet());
+        dto.setBuilding(entity.getBuilding());
+        dto.setMsisdn(entity.getMsisdn());
+        dto.setEmail(entity.getEmail());
+        dto.setRepresentativeName(entity.getRepresentativeName());
+        dto.setRepresentativeMiddleName(entity.getRepresentativeMiddleName());
+        dto.setRepresentativeLastName(entity.getRepresentativeLastName());
+        dto.setRepresentativeInn(entity.getRepresentativeInn());
+        dto.setRepresentativePosition(entity.getRepresentativePosition());
 
         return dto;
     }
@@ -106,24 +107,24 @@ public class CompanyMapper {
                 .fullName(dto.getFullName())
                 .shortName(dto.getShortName())
                 .status(dto.getStatus())
-                .companyRegisterDateTimestamp(dto.getCompanyRegisterDateTimestamp())
+                .companyRegisterDateTimestamp(dto.getRegisterDateTimestamp())
                 .mainOkved(dto.getMainOkved())
                 .additionalOkveds(dto.getAdditionalOkveds())
-                .companyMsisdn(dto.getCompanyMsisdn())
-                .companyEmail(dto.getCompanyEmail())
-                .companyUrl(dto.getCompanyUrl())
-                .companyRepresentativePosition(dto.getCompanyRepresentativePosition())
-                .companyRepresentativeInn(dto.getCompanyRepresentativeInn())
+                .companyMsisdn(dto.getMsisdn())
+                .companyEmail(dto.getEmail())
+                .companyUrl(dto.getUrl())
+                .companyRepresentativePosition(dto.getRepresentativePosition())
+                .companyRepresentativeInn(dto.getRepresentativeInn())
                 .address(dto.getAddress())
-                .companyZip(dto.getCompanyZip())
-                .companyCountry(dto.getCompanyCountry())
-                .companyRegion(dto.getCompanyRegion())
-                .companyCity(dto.getCompanyCity())
-                .companyStreet(dto.getCompanyStreet())
-                .companyBuilding(dto.getCompanyBuilding())
-                .companyRepresentativeName(dto.getCompanyRepresentativeName())
-                .companyRepresentativeLastName(dto.getCompanyRepresentativeLastName())
-                .companyRepresentativeMiddleName(dto.getCompanyRepresentativeMiddleName())
+                .companyZip(dto.getZip())
+                .companyCountry(dto.getCountry())
+                .companyRegion(dto.getRegion())
+                .companyCity(dto.getCity())
+                .companyStreet(dto.getStreet())
+                .companyBuilding(dto.getBuilding())
+                .companyRepresentativeName(dto.getRepresentativeName())
+                .companyRepresentativeLastName(dto.getRepresentativeLastName())
+                .companyRepresentativeMiddleName(dto.getRepresentativeMiddleName())
                 .build();
     }
 
@@ -147,21 +148,21 @@ public class CompanyMapper {
         dto.setAddress(addressComponents.getFullAddress());
         dto.setMainOkved(response.getMainOkved());
         dto.setAdditionalOkveds(response.getAdditionalOkveds());
-        dto.setCompanyUrl(response.getWebsite());
-        dto.setCompanyRegisterDateTimestamp(response.getRegistrationDate());
-        dto.setCompanyZip(addressComponents.getPostalCode());
-        dto.setCompanyCountry(addressComponents.getCountry());
-        dto.setCompanyRegion(addressComponents.getRegion());
-        dto.setCompanyCity(addressComponents.getCity());
-        dto.setCompanyStreet(addressComponents.getStreet());
-        dto.setCompanyBuilding(addressComponents.getFullHouseNumber());
-        dto.setCompanyMsisdn(response.getPhone());
-        dto.setCompanyEmail(response.getEmail());
-        dto.setCompanyRepresentativeName(nameComponents.getName());
-        dto.setCompanyRepresentativeMiddleName(nameComponents.getMiddleName());
-        dto.setCompanyRepresentativeLastName(nameComponents.getLastName());
-        dto.setCompanyRepresentativeInn(response.getManagerInn());
-        dto.setCompanyRepresentativePosition(response.getManagerPosition());
+        dto.setUrl(response.getWebsite());
+        dto.setRegisterDateTimestamp(response.getRegistrationDate());
+        dto.setZip(addressComponents.getPostalCode());
+        dto.setCountry(addressComponents.getCountry());
+        dto.setRegion(addressComponents.getRegion());
+        dto.setCity(addressComponents.getCity());
+        dto.setStreet(addressComponents.getStreet());
+        dto.setBuilding(addressComponents.getFullHouseNumber());
+        dto.setMsisdn(response.getPhone());
+        dto.setEmail(response.getEmail());
+        dto.setRepresentativeName(nameComponents.getName());
+        dto.setRepresentativeMiddleName(nameComponents.getMiddleName());
+        dto.setRepresentativeLastName(nameComponents.getLastName());
+        dto.setRepresentativeInn(response.getManagerInn());
+        dto.setRepresentativePosition(response.getManagerPosition());
 
         return dto;
     }
@@ -173,33 +174,30 @@ public class CompanyMapper {
 
         return CompanyCsvDto.builder()
                 .id(entity.getCompanyId().toString())
-                .companyKind(entity.getCompanyKind())
-                .companyRegisterIp(entity.getCompanyRegisterIp())
-                .companyContractConclusionDate(fromLocalDateToLong(entity.getCompanyContractConclusionDate()))
-                .companyContractTerminationDate(fromLocalDateToLong(entity.getCompanyContractTerminationDate()))
-                .companyContractNumber(entity.getCompanyContractNumber())
-                .inn(entity.getInn())
+                .kind(entity.getKind())
+                .registerIp(entity.getRegisterIp())
+                .registerDate(fromInstantToLong(entity.getCreatedDate()))
+                .contractTerminationDate(fromLocalDateToLong(entity.getContractTerminationDate()))
+                .contractNumber(entity.getContractNumber())
                 .ogrn(entity.getOgrn())
-                .fullName(cleanCompanyName(entity.getFullName()))
                 .shortName(cleanCompanyName(entity.getShortName()))
-                .status(entity.getStatus())
-                .address(entity.getAddress().replace(",", ""))
+                .fullName(cleanCompanyName(entity.getFullName()))
                 .okveds(allOkveds)
-                .companyUrl(entity.getCompanyUrl())
-                .companyRegisterDateTimestamp(fromStringDateToLong(entity.getCompanyRegisterDateTimestamp()))
-                .companyZip(entity.getCompanyZip())
-                .companyCountry(entity.getCompanyCountry())
-                .companyRegion(entity.getCompanyRegion())
-                .companyCity(entity.getCompanyCity())
-                .companyStreet(entity.getCompanyStreet())
-                .companyBuilding(entity.getCompanyBuilding())
-                .companyMsisdn(entity.getCompanyMsisdn())
-                .companyEmail(entity.getCompanyEmail())
-                .companyRepresentativeName(entity.getCompanyRepresentativeName())
-                .companyRepresentativeMiddleName(entity.getCompanyRepresentativeMiddleName())
-                .companyRepresentativeLastName(entity.getCompanyRepresentativeLastName())
-                .companyRepresentativeInn(entity.getCompanyRepresentativeInn())
-                .companyRepresentativePosition(entity.getCompanyRepresentativePosition())
+                .url(entity.getUrl())
+                .registerDateTimestamp(fromStringDateToLong(entity.getRegisterDateTimestamp()))
+                .zip(entity.getZip())
+                .country(entity.getCountry())
+                .region(entity.getRegion())
+                .city(entity.getCity())
+                .street(entity.getStreet())
+                .building(entity.getBuilding())
+                .msisdn(entity.getMsisdn())
+                .email(entity.getEmail())
+                .representativeName(entity.getRepresentativeName())
+                .representativeMiddleName(entity.getRepresentativeMiddleName())
+                .representativeLastName(entity.getRepresentativeLastName())
+                .representativeInn(entity.getRepresentativeInn())
+                .representativePosition(entity.getRepresentativePosition())
                 .build();
     }
 
@@ -209,8 +207,7 @@ public class CompanyMapper {
         if (name == null) {
             return null;
         }
-
-        return "\"" + name.replace("\"", "") + "\"";
+        return name.replace("\"", "").trim();
     }
 
     private Long fromLocalDateToLong(LocalDate date) {
@@ -226,6 +223,13 @@ public class CompanyMapper {
         }
         LocalDate localDate = LocalDate.parse(date);
         return localDate.atStartOfDay().toEpochSecond(ZoneOffset.UTC);
+    }
+
+    private Long fromInstantToLong(Instant instant) {
+        if (instant == null) {
+            return null;
+        }
+        return instant.getEpochSecond();
     }
 
     /**

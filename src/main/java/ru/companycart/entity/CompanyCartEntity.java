@@ -30,15 +30,15 @@ public class CompanyCartEntity implements Serializable {
     @Column(name = "company_id", unique = true)
     private Long companyId;
 
-    private int companyKind = 4;
+    private int kind = 4;
 
-    private String companyRegisterIp;
+    private String registerIp;
 
-    private LocalDate companyContractConclusionDate;
+    private LocalDate contractConclusionDate;
 
-    private LocalDate companyContractTerminationDate;
+    private LocalDate contractTerminationDate;
 
-    private String companyContractNumber;
+    private String contractNumber;
 
     @Column(name = "inn", unique = true, nullable = false)
     private String inn;
@@ -63,50 +63,50 @@ public class CompanyCartEntity implements Serializable {
     @Column(name = "additional_okveds")
     private List<String> additionalOkveds;
 
-    @Column(name = "company_url")
-    private String companyUrl;
+    @Column(name = "url")
+    private String url;
 
-    @Column(name = "company_register_timestamp")
-    private String companyRegisterDateTimestamp;
+    @Column(name = "register_timestamp")
+    private String registerDateTimestamp;
 
-    @Column(name = "company_zip")
-    private String companyZip;
+    @Column(name = "zip")
+    private String zip;
 
-    @Column(name = "company_country")
-    private String companyCountry;
+    @Column(name = "country")
+    private String country;
 
-    @Column(name = "company_region")
-    private String companyRegion;
+    @Column(name = "region")
+    private String region;
 
-    @Column(name = "company_city")
-    private String companyCity;
+    @Column(name = "city")
+    private String city;
 
-    @Column(name = "company_street")
-    private String companyStreet;
+    @Column(name = "street")
+    private String street;
 
-    @Column(name = "company_building")
-    private String companyBuilding;
+    @Column(name = "building")
+    private String building;
 
-    @Column(name = "company_msisdn")
-    private List<String> companyMsisdn;
+    @Column(name = "msisdn")
+    private List<String> msisdn;
 
-    @Column(name = "company_email")
-    private String companyEmail;
+    @Column(name = "email")
+    private String email;
 
-    @Column(name = "company_representative_name")
-    private String companyRepresentativeName;
+    @Column(name = "representative_name")
+    private String representativeName;
 
-    @Column(name = "company_representative_middle_name")
-    private String companyRepresentativeMiddleName;
+    @Column(name = "representative_middle_name")
+    private String representativeMiddleName;
 
-    @Column(name = "company_representative_last_name")
-    private String companyRepresentativeLastName;
+    @Column(name = "representative_last_name")
+    private String representativeLastName;
 
-    @Column(name = "company_representative_inn")
-    private String companyRepresentativeInn;
+    @Column(name = "representative_inn")
+    private String representativeInn;
 
-    @Column(name = "company_representative_position")
-    private String companyRepresentativePosition;
+    @Column(name = "representative_position")
+    private String representativePosition;
 
     @CreationTimestamp
     private Instant createdDate;
@@ -119,6 +119,10 @@ public class CompanyCartEntity implements Serializable {
     @OneToMany(fetch = FetchType.LAZY,
             mappedBy = "companyCartEntity")
     private List<OfferingEntity> offerings;
+
+    @OneToMany(fetch = FetchType.LAZY,
+            mappedBy = "companyCartEntity")
+    private List<ContentAccessEntity> contentAccess;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "state")
@@ -161,21 +165,21 @@ public class CompanyCartEntity implements Serializable {
         this.address = Optional.ofNullable(address).orElseThrow();
         this.mainOkved = Optional.ofNullable(mainOkved).orElseThrow();
         this.additionalOkveds = additionalOkveds;
-        this.companyUrl = companyUrl;
-        this.companyRegisterDateTimestamp = companyRegisterDateTimestamp;
-        this.companyZip = companyZip;
-        this.companyCountry = companyCountry;
-        this.companyRegion = companyRegion;
-        this.companyCity = companyCity;
-        this.companyStreet = companyStreet;
-        this.companyBuilding = companyBuilding;
-        this.companyMsisdn = companyMsisdn;
-        this.companyEmail = companyEmail;
-        this.companyRepresentativeName = companyRepresentativeName;
-        this.companyRepresentativeMiddleName = companyRepresentativeMiddleName;
-        this.companyRepresentativeLastName = companyRepresentativeLastName;
-        this.companyRepresentativeInn = companyRepresentativeInn;
-        this.companyRepresentativePosition = companyRepresentativePosition;
+        this.url = companyUrl;
+        this.registerDateTimestamp = companyRegisterDateTimestamp;
+        this.zip = companyZip;
+        this.country = companyCountry;
+        this.region = companyRegion;
+        this.city = companyCity;
+        this.street = companyStreet;
+        this.building = companyBuilding;
+        this.msisdn = companyMsisdn;
+        this.email = companyEmail;
+        this.representativeName = companyRepresentativeName;
+        this.representativeMiddleName = companyRepresentativeMiddleName;
+        this.representativeLastName = companyRepresentativeLastName;
+        this.representativeInn = companyRepresentativeInn;
+        this.representativePosition = companyRepresentativePosition;
         this.state = CompanyUpdateState.ACTUAL;
     }
 
@@ -184,21 +188,21 @@ public class CompanyCartEntity implements Serializable {
         this.address = Optional.ofNullable(dto.getAddress()).orElseThrow();
         this.mainOkved = Optional.ofNullable(dto.getMainOkved()).orElseThrow();
         this.additionalOkveds = dto.getAdditionalOkveds();
-        this.companyUrl = dto.getCompanyUrl();
-        this.companyRegisterDateTimestamp = dto.getCompanyRegisterDateTimestamp();
-        this.companyZip = dto.getCompanyZip();
-        this.companyCountry = dto.getCompanyCountry();
-        this.companyRegion = dto.getCompanyRegion();
-        this.companyCity = dto.getCompanyCity();
-        this.companyStreet = dto.getCompanyStreet();
-        this.companyBuilding = dto.getCompanyBuilding();
-        this.companyMsisdn = dto.getCompanyMsisdn();
-        this.companyEmail = dto.getCompanyEmail();
-        this.companyRepresentativeName = dto.getCompanyRepresentativeName();
-        this.companyRepresentativeMiddleName = dto.getCompanyRepresentativeMiddleName();
-        this.companyRepresentativeLastName = dto.getCompanyRepresentativeLastName();
-        this.companyRepresentativeInn = dto.getCompanyRepresentativeInn();
-        this.companyRepresentativePosition = dto.getCompanyRepresentativePosition();
+        this.url = dto.getCompanyUrl();
+        this.registerDateTimestamp = dto.getCompanyRegisterDateTimestamp();
+        this.zip = dto.getCompanyZip();
+        this.country = dto.getCompanyCountry();
+        this.region = dto.getCompanyRegion();
+        this.city = dto.getCompanyCity();
+        this.street = dto.getCompanyStreet();
+        this.building = dto.getCompanyBuilding();
+        this.msisdn = dto.getCompanyMsisdn();
+        this.email = dto.getCompanyEmail();
+        this.representativeName = dto.getCompanyRepresentativeName();
+        this.representativeMiddleName = dto.getCompanyRepresentativeMiddleName();
+        this.representativeLastName = dto.getCompanyRepresentativeLastName();
+        this.representativeInn = dto.getCompanyRepresentativeInn();
+        this.representativePosition = dto.getCompanyRepresentativePosition();
         this.updateDate = Instant.now();
         this.state = CompanyUpdateState.ACTUAL;
     }

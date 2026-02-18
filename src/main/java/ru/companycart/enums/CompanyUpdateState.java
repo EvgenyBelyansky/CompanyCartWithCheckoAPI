@@ -5,39 +5,16 @@ import java.time.temporal.ChronoUnit;
 
 public enum CompanyUpdateState {
 
-    ACTUAL(30),
+    ACTUAL,
 
-    OLD(5),
+    OLD,
 
-    OUTDATED(90),
+    OUTDATED,
 
     DELETED,
 
-    API_ERROR(3),
+    API_ERROR,
 
     SENT;
 
-    private final Integer daysThreshold;
-
-    CompanyUpdateState(Integer daysThreshold) {
-        this.daysThreshold = daysThreshold;
-    }
-
-    CompanyUpdateState() {
-        this(null);
-    }
-
-    public Integer getDaysThreshold() {
-        return daysThreshold;
-    }
-
-    public boolean shouldUpdate(Instant lastUpdate) {
-        // Для состояний без порога возвращаем false
-        if (daysThreshold == null) {
-            return false;
-        }
-
-        long daysSinceUpdate = ChronoUnit.DAYS.between(lastUpdate, Instant.now());
-        return daysSinceUpdate > this.daysThreshold;
-    }
 }
